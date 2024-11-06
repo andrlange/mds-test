@@ -1,0 +1,33 @@
+services:
+  postgresql:
+    image: postgres:17.0-alpine
+    container_name: postgresql
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password!1234
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgres/data
+    volumes:
+      - './vols/postgresql:/var/lib/postgres/data'
+      - './init-database.sh:/docker-entrypoint-initdb.d/init-database.sh'
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4:8.12
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: password!1234
+      PGADMIN_SERVER_JSON_FILE: /var/lib/pgadmin4/servers.json
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+    volumes:
+      - './vols/pgadmin_data:/etc/pgadmin/'
+      - './vols/pgadmin_config:/var/lib/pgadmin/'
+      - './servers.json:/var/lib/pgadmin4/servers.json:ro'
+    ports:
+      - "5400:80"
+    depends_on:
+      - postgresql
+
