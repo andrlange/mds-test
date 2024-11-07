@@ -1,10 +1,10 @@
-package cool.cfapps.multijpa;
+package cool.cfapps.mds;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class MultiJpaApplicationTests {
+class MultiDataApplicationTests {
 
     @Test
     void contextLoads() {
