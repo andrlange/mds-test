@@ -71,7 +71,53 @@ If a "SELECT 1" is possible the DataSource is stored in the AbstractRoutingDataS
 determine the corresponding DataSource for this user.
 
 ```Java
-@Override
+@Configuration
+@Slf4j
+public class DbUserDetailsService extends InMemoryUserDetailsManager {
+
+    private final String driver;
+    private final String url;
+    private final String defaultUsername;
+    private final String defaultPassword;
+    private final int minPoolSize;
+    private final int maxPoolSize;
+
+    /// inject config from application properties
+    public DbUserDetailsService(
+            @Value("${spring.datasource.driver-class-name}") String driver,
+            @Value("${spring.datasource.url}") String url,
+            @Value("${spring.datasource.username}") String username,
+            @Value("${spring.datasource.password}") String password,
+            @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
+            @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize) {
+        createUser(createUserDetails(username, password));
+        this.driver = driver;
+        this.url = url;
+        this.defaultUsername = username;
+        this.defaultPassword = password;
+        this.minPoolSize = minPoolSize;
+        this.maxPoolSize = maxPoolSize;
+    }
+
+    /// we will define one default DataSource 
+    @Bean
+    public DataSource defaultDataSource() {
+        HikariDataSource defaultDs = DataSourceBuilder.create()
+                .type(HikariDataSource.class)
+                .driverClassName(driver)
+                .url(url)
+                .username(defaultUsername)
+                .password(defaultPassword)
+                .build();
+
+        defaultDs.setMaximumPoolSize(maxPoolSize);
+        defaultDs.setMinimumIdle(minPoolSize);
+
+        return new LazyConnectionDataSourceProxy(defaultDs);
+    }
+    
+    /// InMemoryUserDetails Implementation
+    @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
         String auth = request.getHeader("Authorization");
