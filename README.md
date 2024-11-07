@@ -70,5 +70,5 @@ determine the corresponding DataSource for this user.
 
 ### Class "TenantRoutingDataSource"
 This Class is marked as ```@Primary``` so the Router will determine the right DataSource for the given 
-SecurityContext and user.
+SecurityContext and user, and it is marked as the Primary DataSource Bean.
 
