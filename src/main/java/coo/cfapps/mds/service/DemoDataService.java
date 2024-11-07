@@ -32,11 +32,7 @@ public class DemoDataService {
         // Log and perform any other service-related logic
         log.info("Fetching data for user: {}", username);
 
-        try{ DataSource ds = applicationContext.getBean(DataSource.class);
-            log.info("Current database schema: {}", ds.getConnection().getSchema());
-        } catch (Exception e) {}
 
-        Collection <DataSource> dsList = applicationContext.getBeansOfType(DataSource.class).values();
         AtomicInteger i = new AtomicInteger(0);
         log.info("---------- LIST ALL DATA SOURCES ----------");
         Arrays.stream(applicationContext.getBeanDefinitionNames()).toList().forEach(beanName -> {
@@ -51,6 +47,10 @@ public class DemoDataService {
         });
 
         log.info("------------------- END -------------------");
+
+        try{ DataSource ds = applicationContext.getBean(DataSource.class);
+            log.info("Current database schema: {}", ds.getConnection().getSchema());
+        } catch (Exception e) {}
 
         Iterable<DemoData> data = demoDataRepository.findAll();
         log.info("Data fetched from schema - user: {}", demoDataRepository.getSchema());
