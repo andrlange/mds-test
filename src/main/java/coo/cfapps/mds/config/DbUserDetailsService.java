@@ -8,6 +8,7 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -28,29 +29,40 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
     private final String url;
     private final String defaultUsername;
     private final String defaultPassword;
+    private final int minPoolSize;
+    private final int maxPoolSize;
 
 
     public DbUserDetailsService(
-                                @Value("${spring.datasource.driver-class-name}") String driver,
-                                @Value("${spring.datasource.url}") String url,
-                                @Value("${spring.datasource.username}") String username,
-                                @Value("${spring.datasource.password}") String password) {
+            @Value("${spring.datasource.driver-class-name}") String driver,
+            @Value("${spring.datasource.url}") String url,
+            @Value("${spring.datasource.username}") String username,
+            @Value("${spring.datasource.password}") String password,
+            @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
+            @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize) {
         createUser(createUserDetails(username, password));
         this.driver = driver;
         this.url = url;
         this.defaultUsername = username;
         this.defaultPassword = password;
+        this.minPoolSize = minPoolSize;
+        this.maxPoolSize = maxPoolSize;
     }
 
     @Bean
     public DataSource defaultDataSource() {
-        return DataSourceBuilder.create()
+        HikariDataSource defaultDs = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
-               .driverClassName(driver)
-               .url(url)
-               .username(defaultUsername)
-               .password(defaultPassword)
-               .build();
+                .driverClassName(driver)
+                .url(url)
+                .username(defaultUsername)
+                .password(defaultPassword)
+                .build();
+
+        defaultDs.setMaximumPoolSize(maxPoolSize);
+        defaultDs.setMinimumIdle(minPoolSize);
+
+        return new LazyConnectionDataSourceProxy(defaultDs);
     }
 
     @Override
@@ -105,13 +117,18 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
     private boolean checkUserAgainstDb(String un, String pw) {
 
-        DataSource ds = DataSourceBuilder.create()
+        HikariDataSource ds = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .driverClassName(driver)
                 .username(un)
                 .password(pw)
                 .url(url)
                 .build();
+
+        ds.setMaximumPoolSize(maxPoolSize);
+        ds.setMinimumIdle(minPoolSize);
+
+        LazyConnectionDataSourceProxy lcpDs = new LazyConnectionDataSourceProxy(ds);
 
         log.info("Checking user against database: {}:{} - {} - {}", un, pw, url, driver);
 
@@ -126,12 +143,12 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
                         return i;
                     });
 
-            log.info("Schema for this user: {} is {}",un,ds.getConnection().getSchema());
+            log.info("Schema for this user: {} is {}", un, ds.getConnection().getSchema());
 
             if (result.get() == 1) {
-                TenantRoutingDataSource.addDataSource(un,pw,url,driver);
+                TenantRoutingDataSource.addDataSource(un, lcpDs);
             }
-            ds.getConnection().close();
+            //ds.getConnection().close();
         } catch (Exception e) {
             log.info("Failed to capture connection: {}", e.getMessage());
         }

@@ -1,7 +1,6 @@
 package coo.cfapps.mds.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 import org.springframework.jdbc.datasource.lookup.DataSourceLookup;
@@ -21,7 +20,7 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
     private static final ThreadLocal<String> currentUser = new ThreadLocal<>();
     private static final Map<String, DataSource> dataSources = new ConcurrentHashMap<>();
-    private static final Map<Object,Object> lookup = new ConcurrentHashMap<>();
+    private static final Map<Object, Object> lookup = new ConcurrentHashMap<>();
 
     TenantRoutingDataSource(DataSource defaultDataSource) {
         setDefaultTargetDataSource(defaultDataSource);
@@ -40,16 +39,7 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
     }
 
 
-    public static void addDataSource(String un, String pw, String url, String driver) {
-
-        DataSource ds = DataSourceBuilder.create()
-                .driverClassName(driver)
-                .url(url)
-                .username(un)
-                .password(pw)
-                .build();
-
-
+    public static void addDataSource(String un, DataSource ds) {
         lookup.computeIfAbsent(un, k -> un);
         dataSources.computeIfAbsent(un, k -> ds);
     }
@@ -59,9 +49,9 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
     protected Object determineCurrentLookupKey() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
-            if(getResolvedDataSources().size()!=dataSources.size()) afterPropertiesSet();
+            if (getResolvedDataSources().size() != dataSources.size()) afterPropertiesSet();
 
-            log.info("resolvedDataSources:{}",getResolvedDataSources().size());
+            log.info("resolvedDataSources:{}", getResolvedDataSources().size());
             String key = authentication.getName();
             boolean r = lookup.get(key) != null;
             log.info("determineCurrentLookupKey: {} for 1 DataSource of {}: {}", key, lookup.size(), r);
@@ -75,7 +65,7 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
     private static class LookUp implements DataSourceLookup {
         @Override
         public DataSource getDataSource(String dataSourceName) throws DataSourceLookupFailureException {
-           log.info("Looking up DataSource: {}", dataSourceName);
+            log.info("Looking up DataSource: {}", dataSourceName);
             return dataSources.get(dataSourceName);
         }
     }
