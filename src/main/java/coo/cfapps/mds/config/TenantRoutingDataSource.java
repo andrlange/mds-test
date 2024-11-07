@@ -15,12 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Configuration("tenantRoutingConfig")
 @Primary
 @Slf4j
-public class TenantRoutingConfig extends AbstractRoutingDataSource {
+public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
     private static final ThreadLocal<String> currentUser = new ThreadLocal<>();
     private static final Map<Object, Object> dbs = new ConcurrentHashMap<>();
 
-    TenantRoutingConfig(ApplicationContext applicationContext) {
+    TenantRoutingDataSource(ApplicationContext applicationContext) {
         DataSource defaultDataSource = (DataSource) applicationContext.getBean("DataSource_Default");
         setDefaultTargetDataSource(defaultDataSource);
         setTargetDataSources(dbs);

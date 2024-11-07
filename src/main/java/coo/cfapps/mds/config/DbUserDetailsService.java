@@ -123,7 +123,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
                         pw, url, driver);
 
                 DataSource addThis = (DataSource) applicationContext.getBean("DataSource_" + un);
-                TenantRoutingConfig.addDataSource("DataSource_"+un,addThis);
+                TenantRoutingDataSource.addDataSource("DataSource_" + un,addThis);
 
 
             }

@@ -21,13 +21,13 @@ public class SchemaContextHolder {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         log.info("Setting schema context for user: {}", auth.getName());
         if (auth.isAuthenticated()) {
-            TenantRoutingConfig.setCurrentUser(auth.getName());
+            TenantRoutingDataSource.setCurrentUser(auth.getName());
             try {
                 log.info("execute the join point with current schema context set");
                 return joinPoint.proceed();
             } finally {
                 log.info("execute the join point ended");
-                TenantRoutingConfig.clearCurrentUser();
+                TenantRoutingDataSource.clearCurrentUser();
             }
         }
         return joinPoint.proceed();
