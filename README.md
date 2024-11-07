@@ -1,6 +1,18 @@
 # Multi Data Source Demo
 
-## using PostgreSQL 17 and PG Admin 4
+This Demo shows how we can use Spring Security with Database Users only and Multi-Schema in a DB for authentication and 
+routing all 
+DB Queries (CrudRepository + Service) using the right DB user context.
+
+## using PostgreSQL 17 and PG Admin 4 (Docker-Compose)
+
+### Based on Spring Boot 3.3.5
+
+- Spring Boot Starter JDBC
+- Spring Boot Starter Security
+- PostgreSQL
+- Lombok
+- Spring Boot Starter Web
 
 ### Start docker instances:
 
