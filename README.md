@@ -25,7 +25,7 @@ All relevant data and configs from PostgreSQL and PGAdmin are exposed to the loc
 docker compose up -d
 ```
 
-For PostgreSQL three users are create using three schemas:
+For PostgreSQL three users are created using three schemas:
 - user_one : Password: password_one Schema: schema_user_one
 - user_two : Password: password_two Schema: schema_user_two
 - user_three : Password: password_three Schema: schema_user_three
