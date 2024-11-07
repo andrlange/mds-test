@@ -18,31 +18,24 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Configuration
 @Slf4j
 public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
-
-    private final DataSourceConfigHolder dataSourceConfigHolder;
     private final DynamicDataSourceRegistry dynamicDataSourceRegistry;
     private final String driver;
     private final String url;
-    private final Map<Object, Object> dataSources = new ConcurrentHashMap<>();
     private final ApplicationContext applicationContext;
 
     public DbUserDetailsService(ApplicationContext applicationContext,
-                                DataSourceConfigHolder dataSourceConfigHolder,
                                 DynamicDataSourceRegistry dynamicDataSourceRegistry,
                                 @Value("${spring.datasource.driver-class-name}") String driver,
                                 @Value("${spring.datasource.url}") String url,
                                 @Value("${spring.datasource.username}") String username,
                                 @Value("${spring.datasource.password}") String password) {
         this.applicationContext = applicationContext;
-        this.dataSourceConfigHolder = dataSourceConfigHolder;
         this.dynamicDataSourceRegistry = dynamicDataSourceRegistry;
         createUser(createUserDetails(username, password));
         dynamicDataSourceRegistry.registerDataSource("DataSource_Default", username, password, url, driver);
@@ -126,16 +119,11 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             log.info("Schema for this user: {} is {}",un,ds.getConnection().getSchema());
 
             if (result.get() == 1) {
-                DataSourceConfigHolder.MetaData meta = dataSourceConfigHolder.addMetaData(un, pw,
-                        "schema_" + un, driver, url);
-                log.info("metaData created: {}", meta);
-                dynamicDataSourceRegistry.registerDataSource("DataSource_" + un, meta.username(),
-                        meta.password(), meta.url(), meta.driver());
+                dynamicDataSourceRegistry.registerDataSource("DataSource_" + un,un,
+                        pw, url, driver);
 
                 DataSource addThis = (DataSource) applicationContext.getBean("DataSource_" + un);
-                dataSources.put(un, addThis);
-                TenantRoutingConfig router = (TenantRoutingConfig) applicationContext.getBean("tenantRoutingConfig");
-                router.addDataSource(un,addThis);
+                TenantRoutingConfig.addDataSource("DataSource_"+un,addThis);
 
 
             }

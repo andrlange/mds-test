@@ -27,19 +27,20 @@ public class TenantRoutingConfig extends AbstractRoutingDataSource {
     }
 
     public static void setCurrentUser(String username) {
+        log.info("Setting current user: {}", username);
         currentUser.set(username);
     }
 
     public static void clearCurrentUser() {
+        log.info("Removing current user: {}", currentUser.get());
         currentUser.remove();
     }
 
 
-    public void addDataSource(String key, DataSource dataSource) {
+    public static void addDataSource(String key, DataSource dataSource) {
         Map<Object, Object> newDs = Map.of(key, dataSource);
-        dbs.computeIfAbsent(key, k -> newDs);//.putAll(dataSources);
+        dbs.computeIfAbsent(key, k -> newDs);
         log.info("Updated DataSources: {}", dbs.size());
-        setDefaultTargetDataSource(dbs);
     }
 
 
@@ -47,14 +48,15 @@ public class TenantRoutingConfig extends AbstractRoutingDataSource {
     protected Object determineCurrentLookupKey() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
-            String key = authentication.getName();
+            String key = "DataSource_"+authentication.getName();
             boolean r = dbs.get(key) != null;
-            dbs.forEach((k, v) -> log.info("DataSources for key: {}", k));
-            log.info("determineCurrentLookupKey: {} for {} DataSources : {}", key, dbs.size(), r);
-            //log.info("thread local key: {}",CURRENT_USER_NAME.get());
+            log.info("determineCurrentLookupKey: {} for 1 DataSource of {}: {}", key, dbs.size(), r);
+            log.info("dbs beans: {}", dbs);
             return key;
         }
         return null;
     }
+
+
 }
 
