@@ -39,7 +39,7 @@ GRANT USAGE ON SCHEMA schema_user_three TO user_three;
 -- Prevent users from accessing other schemas
 REVOKE ALL ON SCHEMA schema_user_two, schema_user_three FROM user_one;
 REVOKE ALL ON SCHEMA schema_user_one, schema_user_three FROM user_two;
-REVOKE ALL ON SCHEMA schema_user_three, schema_user_two FROM user_three;
+REVOKE ALL ON SCHEMA schema_user_one, schema_user_two FROM user_three;
 
 -- Step 4: Create a demo_data table in each schema with restricted access
 SELECT format('
