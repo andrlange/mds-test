@@ -240,6 +240,23 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
             return dataSources.get(dataSourceName);
         }
     }
+
+    /// clean up data sources on shutdown
+    @PreDestroy
+    public void destroy() {
+        log.info("Destroying dataSources");
+        dataSources.forEach((k,  v) -> {
+            try {
+                v.getConnection().close();
+            } catch (Exception e) {
+                log.error("Error closing DataSource: {}", k, e);
+            } finally {
+                dataSources.clear();
+                lookup.clear();
+                log.info("DataSources destroyed");
+            }
+        });
+    }
 }
 ```
 
