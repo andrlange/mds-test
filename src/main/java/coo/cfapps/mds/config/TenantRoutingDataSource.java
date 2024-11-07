@@ -18,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
-    private static final ThreadLocal<String> currentUser = new ThreadLocal<>();
     private static final Map<String, DataSource> dataSources = new ConcurrentHashMap<>();
     private static final Map<Object, Object> lookup = new ConcurrentHashMap<>();
 
@@ -26,16 +25,6 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
         setDefaultTargetDataSource(defaultDataSource);
         setTargetDataSources(lookup);
         setDataSourceLookup(new LookUp());
-    }
-
-    public static void setCurrentUser(String username) {
-        log.info("Setting current user: {}", username);
-        currentUser.set(username);
-    }
-
-    public static void clearCurrentUser() {
-        log.info("Removing current user: {}", currentUser.get());
-        currentUser.remove();
     }
 
 
