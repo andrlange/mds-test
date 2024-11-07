@@ -72,3 +72,22 @@ determine the corresponding DataSource for this user.
 This Class is marked as ```@Primary``` so the Router will determine the right DataSource for the given 
 SecurityContext and user, and it is marked as the Primary DataSource Bean.
 
+
+## Consideration
+
+### Closing Sessions
+This demo does not reflect Spring Security or other Session Management. 
+On Closing Sessions there also should be considered to:
+- add DataSource removal from "TenantRoutingDataSource"
+- removing the user from "DbUserDetailsService" InMemoryUserDetails provider
+
+### Updating User Credentials e.g. Password
+On Updating User Credentials like Passwords we should consider to:
+- Update credentials in DB first
+- Replace the DataSource with an updated one, so the Connection is working against the right credentials
+- Updating the UserDetails in the InMemoryUserDetails Provider so the credentials are reflecting the new DB User in 
+  our Spring Security User Details
+- (optional) updating other Session details if necessary
+
+
+happy coding - Andreas Lange
