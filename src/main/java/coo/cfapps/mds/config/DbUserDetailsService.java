@@ -5,7 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.userdetails.User;
@@ -24,23 +24,33 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
-    private final DynamicDataSourceRegistry dynamicDataSourceRegistry;
     private final String driver;
     private final String url;
-    private final ApplicationContext applicationContext;
+    private final String defaultUsername;
+    private final String defaultPassword;
 
-    public DbUserDetailsService(ApplicationContext applicationContext,
-                                DynamicDataSourceRegistry dynamicDataSourceRegistry,
+
+    public DbUserDetailsService(
                                 @Value("${spring.datasource.driver-class-name}") String driver,
                                 @Value("${spring.datasource.url}") String url,
                                 @Value("${spring.datasource.username}") String username,
                                 @Value("${spring.datasource.password}") String password) {
-        this.applicationContext = applicationContext;
-        this.dynamicDataSourceRegistry = dynamicDataSourceRegistry;
         createUser(createUserDetails(username, password));
-        dynamicDataSourceRegistry.registerDataSource("DataSource_Default", username, password, url, driver);
         this.driver = driver;
         this.url = url;
+        this.defaultUsername = username;
+        this.defaultPassword = password;
+    }
+
+    @Bean
+    public DataSource defaultDataSource() {
+        return DataSourceBuilder.create()
+                .type(HikariDataSource.class)
+               .driverClassName(driver)
+               .url(url)
+               .username(defaultUsername)
+               .password(defaultPassword)
+               .build();
     }
 
     @Override
@@ -119,13 +129,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             log.info("Schema for this user: {} is {}",un,ds.getConnection().getSchema());
 
             if (result.get() == 1) {
-                dynamicDataSourceRegistry.registerDataSource("DataSource_" + un,un,
-                        pw, url, driver);
-
-                DataSource addThis = (DataSource) applicationContext.getBean("DataSource_" + un);
-                TenantRoutingDataSource.addDataSource("DataSource_" + un,addThis);
-
-
+                TenantRoutingDataSource.addDataSource(un,pw,url,driver);
             }
             ds.getConnection().close();
         } catch (Exception e) {
