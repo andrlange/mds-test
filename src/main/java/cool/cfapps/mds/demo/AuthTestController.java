@@ -1,8 +1,6 @@
-package cool.cfapps.mds.controller;
+package cool.cfapps.mds.demo;
 
 
-import cool.cfapps.mds.entity.DemoData;
-import cool.cfapps.mds.service.DemoDataService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;

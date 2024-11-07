@@ -1,5 +1,6 @@
-package cool.cfapps.mds.config;
+package cool.cfapps.mds.setup;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
@@ -57,6 +58,22 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
             log.info("Looking up DataSource: {}", dataSourceName);
             return dataSources.get(dataSourceName);
         }
+    }
+
+    @PreDestroy
+    public void destroy() {
+        log.info("Destroying dataSources");
+        dataSources.forEach((k,  v) -> {
+            try {
+                v.getConnection().close();
+            } catch (Exception e) {
+                log.error("Error closing DataSource: {}", k, e);
+            } finally {
+                dataSources.clear();
+                lookup.clear();
+                log.info("DataSources destroyed");
+            }
+        });
     }
 
 

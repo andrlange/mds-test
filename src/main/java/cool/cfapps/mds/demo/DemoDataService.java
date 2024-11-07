@@ -1,7 +1,5 @@
-package cool.cfapps.mds.service;
+package cool.cfapps.mds.demo;
 
-import cool.cfapps.mds.entity.DemoData;
-import cool.cfapps.mds.repository.DemoDataRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;

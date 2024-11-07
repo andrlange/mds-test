@@ -1,4 +1,4 @@
-package cool.cfapps.mds.config;
+package cool.cfapps.mds.setup;
 
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.http.HttpServletRequest;

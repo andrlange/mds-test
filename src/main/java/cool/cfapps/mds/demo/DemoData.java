@@ -1,4 +1,4 @@
-package cool.cfapps.mds.entity;
+package cool.cfapps.mds.demo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
