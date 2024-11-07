@@ -20,7 +20,7 @@ public class SchemaContextHolder {
     public Object maintainSchemaContext(ProceedingJoinPoint joinPoint) throws Throwable {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         log.info("Setting schema context for user: {}", auth.getName());
-        if (auth != null && auth.isAuthenticated()) {
+        if (auth.isAuthenticated()) {
             TenantRoutingConfig.setCurrentUser(auth.getName());
             try {
                 log.info("execute the join point with current schema context set");
