@@ -34,4 +34,5 @@ build/
 
 ##other
 /vols/
+.fastRequest/
 
