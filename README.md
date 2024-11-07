@@ -50,17 +50,17 @@ mvn spring-boot:run
 ```
 
 ## Testing
-```
+```bash
 curl -u user_one:password_one http://localhost:8080/auth/demo
 # returns: [{"id":1,"field1":"demo","field2":"data one"}]
-
-
+```
+```bash
 curl -u user_two:password_two http://localhost:8080/auth/demo
 # returns: [{"id":1,"field1":"demo","field2":"data two"}]
-
+```
+```bash
 curl -u user_three:password_three http://localhost:8080/auth/demo
 # returns: [{"id":1,"field1":"demo","field2":"data three"}]
-
 ```
 
 ## Explanation:
