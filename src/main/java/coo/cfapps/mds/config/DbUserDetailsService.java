@@ -134,9 +134,8 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
                 DataSource addThis = (DataSource) applicationContext.getBean("DataSource_" + un);
                 dataSources.put(un, addThis);
-                TenantRoutingConfig.TenantAwareRoutingConfiguration router = (TenantRoutingConfig.TenantAwareRoutingConfiguration) applicationContext.getBean(
-                        "allDataSources");
-                router.updateDataSources(dataSources);
+                TenantRoutingConfig router = (TenantRoutingConfig) applicationContext.getBean("tenantRoutingConfig");
+                router.addDataSource(un,addThis);
 
 
             }
