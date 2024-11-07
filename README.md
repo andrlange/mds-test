@@ -6,6 +6,8 @@ DB Queries (CrudRepository + Service) using the right DB user context.
 
 ## using PostgreSQL 17 and PG Admin 4 (Docker-Compose)
 
+All relevant data and configs from PostgreSQL and PGAdmin are exposed to the local File System ```/vols```
+
 ### Based on Spring Boot 3.3.5
 
 - Spring Boot Starter JDBC
@@ -68,10 +70,132 @@ Uses the basic authentication credentials to create a DataSource using this cred
 If a "SELECT 1" is possible the DataSource is stored in the AbstractRoutingDataSource, so the SecurityContext will 
 determine the corresponding DataSource for this user.
 
+```Java
+@Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        String auth = request.getHeader("Authorization");
+        String password = "";
+        if (auth != null && !auth.isEmpty()) {
+            /// Decode the basic auth -> base64
+            if (auth.toLowerCase().startsWith("basic ")) {
+                String encodedUserPassword =
+                        new String(Base64.getDecoder().decode(auth.substring("Basic ".length()).trim()), StandardCharsets.UTF_8);
+                if (encodedUserPassword.contains(":")) password = encodedUserPassword.split(":")[1];
+            }
+        }
+
+        /// check if we already have this user in memory UserDetails
+        try {
+            UserDetails checkUser = super.loadUserByUsername(username);
+            if (checkUser != null) {
+                return checkUser;
+            }
+        } catch (UsernameNotFoundException e) {
+            log.info("User not found in memory: {}", username);
+        }
+
+        if (checkUserAgainstDb(username, password)) {
+            createUser(createUserDetails(username, password));
+            return super.loadUserByUsername(username);
+        }
+        return null;
+    }
+
+    /// create a new InMemoryUserDetails Object
+    private UserDetails createUserDetails(String username, String password) {
+        UserDetails ud = User.builder()
+                .username(username)
+                .password("{noop}" + password)
+                .roles("USER")
+                .build();
+        return ud;
+    }
+
+private boolean checkUserAgainstDb(String un, String pw) {
+
+    HikariDataSource ds = DataSourceBuilder.create()
+            .type(HikariDataSource.class)
+            .driverClassName(driver)
+            .username(un)
+            .password(pw)
+            .url(url)
+            .build();
+
+    /// we can minimize the amount of connections for each user
+    ds.setMaximumPoolSize(maxPoolSize);
+    ds.setMinimumIdle(minPoolSize);
+    /// here we use a Lazy Proxy for the DataSource so connections are done on first usage
+    LazyConnectionDataSourceProxy lcpDs = new LazyConnectionDataSourceProxy(ds);
+
+    /// Here we check if we are able to anything on the database with the credentials given by http basic auth
+    AtomicInteger result = new AtomicInteger(0);
+    try {
+        JdbcTemplate jdbc = new JdbcTemplate(ds);
+        jdbc.query("SELECT 1 AS RESULT",
+                (rs, col) -> {
+                    int i = rs.getInt("RESULT");
+                    result.set(i);
+                    return i;
+                });
+
+        if (result.get() == 1) {
+            TenantRoutingDataSource.addDataSource(un, lcpDs);
+        }
+    } catch (Exception e) {
+        log.info("Failed to capture connection: {}", e.getMessage());
+    }
+    return result.get() == 1;
+}
+```
+
 ### Class "TenantRoutingDataSource"
 This Class is marked as ```@Primary``` so the Router will determine the right DataSource for the given 
 SecurityContext and user, and it is marked as the Primary DataSource Bean.
 
+```Java
+@Component
+@Primary
+@Slf4j
+public class TenantRoutingDataSource extends AbstractRoutingDataSource {
+
+    // Keeps the DataSources and Keys for lookup
+    private static final Map<String, DataSource> dataSources = new ConcurrentHashMap<>();
+    private static final Map<Object, Object> lookup = new ConcurrentHashMap<>();
+
+    TenantRoutingDataSource(DataSource defaultDataSource) {
+        setDefaultTargetDataSource(defaultDataSource);
+        setTargetDataSources(lookup);
+        setDataSourceLookup(new LookUp());
+    }
+    
+    public static void addDataSource(String un, DataSource ds) {
+        lookup.computeIfAbsent(un, k -> un);
+        dataSources.computeIfAbsent(un, k -> ds);
+    }
+    
+    /// here we determine the right key based on the authentication (Security Context)
+    @Override
+    protected Object determineCurrentLookupKey() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null) {
+            /// in the case we added a new DataSource and key we need to update the ResolvedDataSources using 
+            /// initialize() called implicit from afterPropertiesSet()
+            if (getResolvedDataSources().size() != dataSources.size()) afterPropertiesSet();
+            return  authentication.getName();
+        }
+        return null;
+    }
+
+    /// our own implementation of a DataSourceLookup. Mapping the username to the right DataSource
+    private static class LookUp implements DataSourceLookup {
+        @Override
+        public DataSource getDataSource(String dataSourceName) throws DataSourceLookupFailureException {
+            return dataSources.get(dataSourceName);
+        }
+    }
+}
+```
 
 ## Consideration
 
