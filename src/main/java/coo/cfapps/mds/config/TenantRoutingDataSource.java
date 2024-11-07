@@ -38,9 +38,11 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
 
     public static void addDataSource(String key, DataSource dataSource) {
+        log.info("Before Update DataSources: {}", dbs.size());
+        try{log.info("Adding DataSources: {}:{}",key, dataSource.getConnection().getSchema());}catch (Exception e){}
         Map<Object, Object> newDs = Map.of(key, dataSource);
         dbs.computeIfAbsent(key, k -> newDs);
-        log.info("Updated DataSources: {}", dbs.size());
+        log.info("After Updated DataSources: {}", dbs.size());
     }
 
 

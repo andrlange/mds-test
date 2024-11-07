@@ -132,8 +132,6 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             log.info("Failed to capture connection: {}", e.getMessage());
         }
 
-        log.info("result: {}", result);
-
         return result.get() == 1;
     }
 
