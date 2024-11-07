@@ -13,9 +13,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SchemaContextHolder {
 
-    //@Around("@annotation(org.springframework.transaction.annotation.Transactional) || " +
-    //        "@within(org.springframework.transaction.annotation.Transactional)")
-
     @Around("@annotation(coo.cfapps.mds.config.SchemaAware) || @within(coo.cfapps.mds.config.SchemaAware)")
     public Object maintainSchemaContext(ProceedingJoinPoint joinPoint) throws Throwable {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
