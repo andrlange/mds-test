@@ -123,6 +123,8 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
                         return i;
                     });
 
+            log.info("Schema for this user: {} is {}",un,ds.getConnection().getSchema());
+
             if (result.get() == 1) {
                 DataSourceConfigHolder.MetaData meta = dataSourceConfigHolder.addMetaData(un, pw,
                         "schema_" + un, driver, url);
