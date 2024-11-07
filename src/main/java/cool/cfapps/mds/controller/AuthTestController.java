@@ -1,15 +1,13 @@
-package coo.cfapps.mds.controller;
+package cool.cfapps.mds.controller;
 
 
-import coo.cfapps.mds.entity.DemoData;
-import coo.cfapps.mds.service.DemoDataService;
+import cool.cfapps.mds.entity.DemoData;
+import cool.cfapps.mds.service.DemoDataService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/auth")

@@ -1,4 +1,4 @@
-package coo.cfapps.multijpa;
+package cool.cfapps.multijpa;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

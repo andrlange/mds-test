@@ -1,6 +1,6 @@
-package coo.cfapps.mds.repository;
+package cool.cfapps.mds.repository;
 
-import coo.cfapps.mds.entity.DemoData;
+import cool.cfapps.mds.entity.DemoData;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 

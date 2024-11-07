@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>coo.cfapps</groupId>
-    <artifactId>multi-jpa</artifactId>
+    <artifactId>mds</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>multi-jpa</name>
-    <description>multi-jpa</description>
+    <description>multi-data-sources</description>
     <url/>
     <licenses>
         <license/>

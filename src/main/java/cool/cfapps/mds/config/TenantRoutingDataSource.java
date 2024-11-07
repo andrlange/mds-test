@@ -1,4 +1,4 @@
-package coo.cfapps.mds.config;
+package cool.cfapps.mds.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;

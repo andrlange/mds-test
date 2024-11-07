@@ -1,4 +1,4 @@
-package coo.cfapps.mds.security;
+package cool.cfapps.mds.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
