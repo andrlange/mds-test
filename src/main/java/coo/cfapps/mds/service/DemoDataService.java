@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Slf4j
@@ -33,6 +36,21 @@ public class DemoDataService {
             log.info("Current database schema: {}", ds.getConnection().getSchema());
         } catch (Exception e) {}
 
+        Collection <DataSource> dsList = applicationContext.getBeansOfType(DataSource.class).values();
+        AtomicInteger i = new AtomicInteger(0);
+        log.info("---------- LIST ALL DATA SOURCES ----------");
+        Arrays.stream(applicationContext.getBeanDefinitionNames()).toList().forEach(beanName -> {
+            try{
+                Object bean = applicationContext.getBean(beanName);
+                if (bean instanceof DataSource) {
+                    log.info("{}: DataSource({}) for Schema: {}",i.incrementAndGet(),beanName,
+                            ((DataSource) bean).getConnection().getSchema());
+                }
+
+            }catch (Exception e) {}
+        });
+
+        log.info("------------------- END -------------------");
 
         Iterable<DemoData> data = demoDataRepository.findAll();
         log.info("Data fetched from schema - user: {}", demoDataRepository.getSchema());
