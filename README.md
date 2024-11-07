@@ -31,7 +31,7 @@ For PostgreSQL three users are created using three schemas:
 - user_three : Password: password_three Schema: schema_user_three
 
 
-alle schemas have the same table: demo_data
+all schemas have the same table: demo_data
  demo_data:
 - id
 - field1
