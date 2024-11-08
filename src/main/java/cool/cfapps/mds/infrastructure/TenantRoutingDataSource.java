@@ -24,12 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
-    private final String driver;
-    private final String url;
-    private final String defaultUsername;
-    private final String defaultPassword;
-    private final int minPoolSize;
-    private final int maxPoolSize;
+
 
     private final HikariDataSource defaultDataSource;
 
@@ -44,19 +39,13 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
                             @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
                             @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize) {
 
-        this.driver = driver;
-        this.url = url;
-        this.defaultUsername = username;
-        this.defaultPassword = password;
-        this.minPoolSize = minPoolSize;
-        this.maxPoolSize = maxPoolSize;
 
         defaultDataSource = DataSourceBuilder.create()
                 .type(HikariDataSource.class)
                 .driverClassName(driver)
                 .url(url)
-                .username(defaultUsername)
-                .password(defaultPassword)
+                .username(username)
+                .password(password)
                 .build();
 
         defaultDataSource.setMaximumPoolSize(maxPoolSize);
