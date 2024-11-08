@@ -50,6 +50,8 @@ mvn spring-boot:run
 ```
 
 ## Testing
+
+### Get Data
 ```bash
 curl -u user_one:password_one http://localhost:8080/auth/demo
 # returns: [{"id":1,"field1":"demo","field2":"data one"}]
@@ -61,6 +63,22 @@ curl -u user_two:password_two http://localhost:8080/auth/demo
 ```bash
 curl -u user_three:password_three http://localhost:8080/auth/demo
 # returns: [{"id":1,"field1":"demo","field2":"data three"}]
+```
+
+### Change Password
+```bash
+curl -u user_three:password_three -X POST http://localhost:8080/auth/change-password \
+-H "Content-Type: application/json" \
+-d '{"oldPassword": "password_three", "newPassword": "newSecret"}'
+
+# returns: true if it changed, else false
+```
+
+### Logout and Remove DataSource and close connections to DB
+After some seconds the DataSource (HikariDataSource) will remove all it's connection from the Hikari Pool and close 
+finally the connection to the DB.
+```bash
+curl -u user_three:password_three http://localhost:8080/auth/logout
 ```
 
 ## Explanation:
