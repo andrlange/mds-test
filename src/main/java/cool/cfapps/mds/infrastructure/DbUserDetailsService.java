@@ -31,8 +31,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
     private final String driver;
     private final String url;
-    private final String defaultUsername;
-    private final String defaultPassword;
+
     private final int minPoolSize;
     private final int maxPoolSize;
 
@@ -42,15 +41,11 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
     public DbUserDetailsService(
             @Value("${spring.datasource.driver-class-name}") String driver,
             @Value("${spring.datasource.url}") String url,
-            @Value("${spring.datasource.username}") String username,
-            @Value("${spring.datasource.password}") String password,
             @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
             @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize,
             TenantRoutingDataSource tenantRoutingDataSource) {
         this.driver = driver;
         this.url = url;
-        this.defaultUsername = username;
-        this.defaultPassword = password;
         this.minPoolSize = minPoolSize;
         this.maxPoolSize = maxPoolSize;
         this.tenantRoutingDataSource = tenantRoutingDataSource;
