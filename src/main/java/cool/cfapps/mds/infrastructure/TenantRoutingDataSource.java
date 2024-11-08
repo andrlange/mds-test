@@ -139,20 +139,16 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
         try {
             log.info("Starting graceful shutdown of HikariCP pool...");
 
-            // 1. First mark the pool as suspended to prevent new connections
-            //hikariDataSource.getHikariPoolMXBean().suspendPool();
-            log.info("Pool suspended, no new connections will be given out");
-
-            // 2. Get current active connections count
+            // 1. Get current active connections count
             int activeConnections = hikariDataSource.getHikariPoolMXBean().getActiveConnections();
             log.info("Active connections before shutdown: {}", activeConnections);
 
-            // 3. Wait a bit for active queries to complete (optional)
+            // 2. Wait a bit for active queries to complete (optional)
             if (activeConnections > 0) {
                 log.info("Waiting for active connections to complete...");
                 Thread.sleep(500); // Adjust this timeout as needed
             }
-            // 4. Finally close the datasource
+            // 3. Finally close the datasource
             hikariDataSource.close();
             log.info("HikariCP pool shutdown completed successfully");
 
