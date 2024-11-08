@@ -24,8 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
-
-
     private final HikariDataSource defaultDataSource;
 
     private static final Map<String, DataSource> dataSources = new ConcurrentHashMap<>();
