@@ -1,4 +1,4 @@
-package cool.cfapps.mds.setup;
+package cool.cfapps.mds.infrastructure;
 
 import com.zaxxer.hikari.HikariDataSource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,11 +8,15 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -32,6 +36,8 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
     private final int minPoolSize;
     private final int maxPoolSize;
 
+    private final TenantRoutingDataSource tenantRoutingDataSource;
+
 
     public DbUserDetailsService(
             @Value("${spring.datasource.driver-class-name}") String driver,
@@ -39,30 +45,20 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             @Value("${spring.datasource.username}") String username,
             @Value("${spring.datasource.password}") String password,
             @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
-            @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize) {
-        createUser(createUserDetails(username, password));
+            @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize,
+            TenantRoutingDataSource tenantRoutingDataSource) {
         this.driver = driver;
         this.url = url;
         this.defaultUsername = username;
         this.defaultPassword = password;
         this.minPoolSize = minPoolSize;
         this.maxPoolSize = maxPoolSize;
+        this.tenantRoutingDataSource = tenantRoutingDataSource;
     }
 
     @Bean
-    public DataSource defaultDataSource() {
-        HikariDataSource defaultDs = DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .driverClassName(driver)
-                .url(url)
-                .username(defaultUsername)
-                .password(defaultPassword)
-                .build();
-
-        defaultDs.setMaximumPoolSize(maxPoolSize);
-        defaultDs.setMinimumIdle(minPoolSize);
-
-        return new LazyConnectionDataSourceProxy(defaultDs);
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Override
@@ -107,7 +103,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
         UserDetails ud = User.builder()
                 .username(username)
-                .password("{noop}" + password)
+                .password(passwordEncoder().encode(password))
                 .roles("USER")
                 .build();
 
@@ -117,25 +113,15 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
     private boolean checkUserAgainstDb(String un, String pw) {
 
-        HikariDataSource ds = DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .driverClassName(driver)
-                .username(un)
-                .password(pw)
-                .url(url)
-                .build();
 
-        ds.setMaximumPoolSize(maxPoolSize);
-        ds.setMinimumIdle(minPoolSize);
-
-        LazyConnectionDataSourceProxy lcpDs = new LazyConnectionDataSourceProxy(ds);
+        DataSource dataSource = createDataSource(un, pw);
 
         log.info("Checking user against database: {}:{} - {} - {}", un, pw, url, driver);
 
 
         AtomicInteger result = new AtomicInteger(0);
         try {
-            JdbcTemplate jdbc = new JdbcTemplate(ds);
+            JdbcTemplate jdbc = new JdbcTemplate(dataSource);
             jdbc.query("SELECT 1 AS RESULT",
                     (rs, col) -> {
                         int i = rs.getInt("RESULT");
@@ -143,17 +129,93 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
                         return i;
                     });
 
-            log.info("Schema for this user: {} is {}", un, ds.getConnection().getSchema());
+            log.info("Schema for this user: {} is {}", un, dataSource.getConnection().getSchema());
 
             if (result.get() == 1) {
-                TenantRoutingDataSource.addDataSource(un, lcpDs);
+                tenantRoutingDataSource.addDataSource(un, dataSource);
             }
-            //ds.getConnection().close();
         } catch (Exception e) {
             log.info("Failed to capture connection: {}", e.getMessage());
         }
 
         return result.get() == 1;
     }
+
+
+    @Transactional
+    public boolean changeUserPassword(String username, String oldPassword, String newPassword) {
+
+        // Get current authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Check if user is authenticated and username matches
+        if (authentication == null || !authentication.getName().equals(username)) {
+            log.info("Not authorized to change this user's password for user: {}", username);
+        } else {
+            log.info("Authorized to change this user's password for user: {}", username);
+        }
+
+        // Get user details
+        UserDetails existingUser = loadUserByUsername(username);
+
+        // Verify old password
+        if (!passwordEncoder().matches(oldPassword, existingUser.getPassword())) {
+            log.info("Old password does not match for user: {}", username);
+            return false;
+        }
+
+        if (newPassword.length() < 8) {
+            log.info("New password is too short for user: {}", username);
+            return false;
+        }
+
+        JdbcTemplate jdbc = new JdbcTemplate(TenantRoutingDataSource.getDataSourceByKey(username));
+        String sql = "ALTER ROLE " + username + " WITH PASSWORD '" + newPassword + "'; ";
+
+        log.info("Updating user password for user in database: {}", username);
+        jdbc.execute(sql);
+        tenantRoutingDataSource.replaceDataSource(username, createDataSource(username, newPassword));
+
+        log.info("Updating user password for user in UserDetailsService: {}", username);
+        updateUser(createUserDetails(username, newPassword));
+
+        return true;
+    }
+
+
+    private DataSource createDataSource(String username, String password) {
+        HikariDataSource ds = DataSourceBuilder.create()
+                .type(HikariDataSource.class)
+                .driverClassName(driver)
+                .username(username)
+                .password(password)
+                .url(url)
+                .build();
+
+        ds.setMaximumPoolSize(maxPoolSize);
+        ds.setMinimumIdle(minPoolSize);
+
+        return ds;
+    }
+
+    //@Transactional
+    public void logOut(String username) {
+        // Get current authenticated user
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Check if user is authenticated and username matches
+        if (authentication == null || !authentication.getName().equals(username)) {
+            log.info("Not authorized to logOff this user: {}", username);
+        } else {
+            log.info("LogOff user: {}", username);
+        }
+
+        tenantRoutingDataSource.removeDataSource(username);
+        deleteUser(username);
+        log.info("Removed user from UserDetailsService and DataSource: {}", username);
+    }
+
+
+
 
 }

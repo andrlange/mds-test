@@ -70,203 +70,21 @@ Uses the basic authentication credentials to create a DataSource using this cred
 If a "SELECT 1" is possible the DataSource is stored in the AbstractRoutingDataSource, so the SecurityContext will 
 determine the corresponding DataSource for this user.
 
-```Java
-@Configuration
-@Slf4j
-public class DbUserDetailsService extends InMemoryUserDetailsManager {
-
-    private final String driver;
-    private final String url;
-    private final String defaultUsername;
-    private final String defaultPassword;
-    private final int minPoolSize;
-    private final int maxPoolSize;
-
-    /// inject config from application properties
-    public DbUserDetailsService(
-            @Value("${spring.datasource.driver-class-name}") String driver,
-            @Value("${spring.datasource.url}") String url,
-            @Value("${spring.datasource.username}") String username,
-            @Value("${spring.datasource.password}") String password,
-            @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
-            @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize) {
-        createUser(createUserDetails(username, password));
-        this.driver = driver;
-        this.url = url;
-        this.defaultUsername = username;
-        this.defaultPassword = password;
-        this.minPoolSize = minPoolSize;
-        this.maxPoolSize = maxPoolSize;
-    }
-
-    /// we will define one default DataSource 
-    @Bean
-    public DataSource defaultDataSource() {
-        HikariDataSource defaultDs = DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .driverClassName(driver)
-                .url(url)
-                .username(defaultUsername)
-                .password(defaultPassword)
-                .build();
-
-        defaultDs.setMaximumPoolSize(maxPoolSize);
-        defaultDs.setMinimumIdle(minPoolSize);
-
-        return new LazyConnectionDataSourceProxy(defaultDs);
-    }
-    
-    /// InMemoryUserDetails Implementation
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-        String auth = request.getHeader("Authorization");
-        String password = "";
-        if (auth != null && !auth.isEmpty()) {
-            /// Decode the basic auth -> base64
-            if (auth.toLowerCase().startsWith("basic ")) {
-                String encodedUserPassword =
-                        new String(Base64.getDecoder().decode(auth.substring("Basic ".length()).trim()), StandardCharsets.UTF_8);
-                if (encodedUserPassword.contains(":")) password = encodedUserPassword.split(":")[1];
-            }
-        }
-
-        /// check if we already have this user in memory UserDetails
-        try {
-            UserDetails checkUser = super.loadUserByUsername(username);
-            if (checkUser != null) {
-                return checkUser;
-            }
-        } catch (UsernameNotFoundException e) {
-            log.info("User not found in memory: {}", username);
-        }
-
-        if (checkUserAgainstDb(username, password)) {
-            createUser(createUserDetails(username, password));
-            return super.loadUserByUsername(username);
-        }
-        return null;
-    }
-
-    /// create a new InMemoryUserDetails Object
-    private UserDetails createUserDetails(String username, String password) {
-        UserDetails ud = User.builder()
-                .username(username)
-                .password("{noop}" + password)
-                .roles("USER")
-                .build();
-        return ud;
-    }
-
-private boolean checkUserAgainstDb(String un, String pw) {
-
-    HikariDataSource ds = DataSourceBuilder.create()
-            .type(HikariDataSource.class)
-            .driverClassName(driver)
-            .username(un)
-            .password(pw)
-            .url(url)
-            .build();
-
-    /// we can minimize the amount of connections for each user
-    ds.setMaximumPoolSize(maxPoolSize);
-    ds.setMinimumIdle(minPoolSize);
-    /// here we use a Lazy Proxy for the DataSource so connections are done on first usage
-    LazyConnectionDataSourceProxy lcpDs = new LazyConnectionDataSourceProxy(ds);
-
-    /// Here we check if we are able to anything on the database with the credentials given by http basic auth
-    AtomicInteger result = new AtomicInteger(0);
-    try {
-        JdbcTemplate jdbc = new JdbcTemplate(ds);
-        jdbc.query("SELECT 1 AS RESULT",
-                (rs, col) -> {
-                    int i = rs.getInt("RESULT");
-                    result.set(i);
-                    return i;
-                });
-
-        if (result.get() == 1) {
-            TenantRoutingDataSource.addDataSource(un, lcpDs);
-        }
-    } catch (Exception e) {
-        log.info("Failed to capture connection: {}", e.getMessage());
-    }
-    return result.get() == 1;
-}
-```
-
 ### Class "TenantRoutingDataSource"
 This Class is marked as ```@Primary``` so the Router will determine the right DataSource for the given 
 SecurityContext and user, and it is marked as the Primary DataSource Bean.
 
-```Java
-@Component
-@Primary
-@Slf4j
-public class TenantRoutingDataSource extends AbstractRoutingDataSource {
-
-    // Keeps the DataSources and Keys for lookup
-    private static final Map<String, DataSource> dataSources = new ConcurrentHashMap<>();
-    private static final Map<Object, Object> lookup = new ConcurrentHashMap<>();
-
-    TenantRoutingDataSource(DataSource defaultDataSource) {
-        setDefaultTargetDataSource(defaultDataSource);
-        setTargetDataSources(lookup);
-        setDataSourceLookup(new LookUp());
-    }
-    
-    public static void addDataSource(String un, DataSource ds) {
-        lookup.computeIfAbsent(un, k -> un);
-        dataSources.computeIfAbsent(un, k -> ds);
-    }
-    
-    /// here we determine the right key based on the authentication (Security Context)
-    @Override
-    protected Object determineCurrentLookupKey() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null) {
-            /// in the case we added a new DataSource and key we need to update the ResolvedDataSources using 
-            /// initialize() called implicit from afterPropertiesSet()
-            if (getResolvedDataSources().size() != dataSources.size()) afterPropertiesSet();
-            return  authentication.getName();
-        }
-        return null;
-    }
-
-    /// our own implementation of a DataSourceLookup. Mapping the username to the right DataSource
-    private static class LookUp implements DataSourceLookup {
-        @Override
-        public DataSource getDataSource(String dataSourceName) throws DataSourceLookupFailureException {
-            return dataSources.get(dataSourceName);
-        }
-    }
-
-    /// clean up data sources on shutdown
-    @PreDestroy
-    public void destroy() {
-        log.info("Destroying dataSources");
-        dataSources.forEach((k,  v) -> {
-            try {
-                v.getConnection().close();
-            } catch (Exception e) {
-                log.error("Error closing DataSource: {}", k, e);
-            } finally {
-                dataSources.clear();
-                lookup.clear();
-                log.info("DataSources destroyed");
-            }
-        });
-    }
-}
-```
 
 ## Consideration
 
 ### Closing Sessions
 This demo does not reflect Spring Security or other Session Management. 
 On Closing Sessions there also should be considered to:
-- add DataSource removal from "TenantRoutingDataSource"
+- call DataSource removal from "TenantRoutingDataSource"
 - removing the user from "DbUserDetailsService" InMemoryUserDetails provider
+```java
+boolean result = userPasswordService.logOut(authentication.getName());
+```
 
 ### Updating User Credentials e.g. Password
 On Updating User Credentials like Passwords we should consider to:
@@ -275,6 +93,35 @@ On Updating User Credentials like Passwords we should consider to:
 - Updating the UserDetails in the InMemoryUserDetails Provider so the credentials are reflecting the new DB User in 
   our Spring Security User Details
 - (optional) updating other Session details if necessary
+```java
+boolean result = userPasswordService.changeUserPassword(authentication.getName(), password.getOldPassword().trim(),
+password.getNewPassword().trim());
+```
 
+### Database Connections
+You can configure the amount of idle and max connections per user/tenant in applications.properties
+To keep track on the current amount of connections you can run as postgres user: 
+```sql
+SELECT SUM(numbackends) FROM pg_stat_database
+
+-- all connections
+SELECT
+    pid as process_id,
+    usename as username,
+    datname as database_name,
+    client_addr as client_address,
+    application_name,
+    backend_start,
+    state,
+    state_change as state_changed_at,
+    wait_event_type,
+    wait_event,
+    query as current_query
+FROM pg_stat_activity
+WHERE datname IS NOT NULL
+ORDER BY backend_start DESC;
+
+
+```
 
 happy coding - Andreas Lange
