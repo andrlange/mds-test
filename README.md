@@ -1,8 +1,9 @@
-# Multi Data Source Demo
+# Multi Data Source Demo using JDBC or JPA (Profiles)
 
 This Demo shows how we can use Spring Security with Database Users only and Multi-Schema in a DB for authentication and 
 routing all 
-DB Queries (CrudRepository + Service) using the right DB user context.
+DB Queries (CrudRepository or JPARepository + Service) using the right DB user context and the Option of JDBC only 
+or JPA as you need.
 
 ## using PostgreSQL 17 and PG Admin 4 (Docker-Compose)
 
@@ -11,6 +12,7 @@ All relevant data and configs from PostgreSQL and PGAdmin are exposed to the loc
 ### Based on Spring Boot 3.3.5
 
 - Spring Boot Starter JDBC
+- Spring Boot Starter JPA
 - Spring Boot Starter Security
 - PostgreSQL
 - Lombok
@@ -44,30 +46,44 @@ Data:
 
 
 ### running the service 
+Depending of what you want to use, you need to give a profile "jdbc" or "jpa" to run the demo:
 
+running jdbc
 ```bash
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=jdbc
+```
+
+running jpa
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=jpa
 ```
 
 ## Testing
 
+Check which profile is used by:
+``bash
+curl -u user_one:password_one http://localhost:8080
+# Hello user_one from authenticated user for JDBC! OR Hello user_one from authenticated user for JPA!
+```
+
+
 ### Get Data
 ```bash
-curl -u user_one:password_one http://localhost:8080/auth/demo
-# returns: [{"id":1,"field1":"demo","field2":"data one"}]
+curl -u user_one:password_one http://localhost:8080/demo
+# returns: [{"id":1,"field1":"jdbc","field2":"data one"}]
 ```
 ```bash
-curl -u user_two:password_two http://localhost:8080/auth/demo
-# returns: [{"id":1,"field1":"demo","field2":"data two"}]
+curl -u user_two:password_two http://localhost:8080/demo
+# returns: [{"id":1,"field1":"jdbc","field2":"data two"}]
 ```
 ```bash
-curl -u user_three:password_three http://localhost:8080/auth/demo
-# returns: [{"id":1,"field1":"demo","field2":"data three"}]
+curl -u user_three:password_three http://localhost:8080/demo
+# returns: [{"id":1,"field1":"jdbc","field2":"data three"}]
 ```
 
 ### Change Password
 ```bash
-curl -u user_three:password_three -X POST http://localhost:8080/auth/change-password \
+curl -u user_three:password_three -X POST http://localhost:8080/change-password \
 -H "Content-Type: application/json" \
 -d '{"oldPassword": "password_three", "newPassword": "newSecret"}'
 
@@ -78,7 +94,7 @@ curl -u user_three:password_three -X POST http://localhost:8080/auth/change-pass
 After some seconds the DataSource (HikariDataSource) will remove all it's connection from the Hikari Pool and close 
 finally the connection to the DB.
 ```bash
-curl -u user_three:password_three http://localhost:8080/auth/logout
+curl -u user_three:password_three http://localhost:8080/logout
 ```
 
 ## Explanation:

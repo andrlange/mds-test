@@ -1,6 +1,5 @@
 package cool.cfapps.mds.demo;
 
-
 import cool.cfapps.mds.infrastructure.Password;
 import cool.cfapps.mds.infrastructure.UserPasswordService;
 import lombok.extern.slf4j.Slf4j;
@@ -8,42 +7,33 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
-@RequestMapping("/auth")
-@Slf4j
-public class AuthTestController {
+import java.util.List;
 
-    private final DemoDataService demoDataService;
+@RestController
+@Slf4j
+public class DemoDataController {
+
+    private final DemoDataService service;
     private final UserPasswordService userPasswordService;
 
-    public AuthTestController(DemoDataService demoDataService, UserPasswordService userPasswordService) {
-        this.demoDataService = demoDataService;
+
+    public DemoDataController(DemoDataService service, UserPasswordService userPasswordService) {
+        this.service = service;
         this.userPasswordService = userPasswordService;
     }
 
-
     @GetMapping
     public String testAuth(Authentication authentication) {
-        return "Hello "+authentication.getName()+" from authenticated user!";
+        return "Hello " + authentication.getName() + " from authenticated user for " + service.type() + "!";
     }
 
     @GetMapping("demo")
-    public Iterable<DemoData> testDemoData() {
-        return demoDataService.fetchDemoData();
-
+    public List<DemoData> testDemoData() {
+        return service.fetchDemoData();
     }
 
-    /*
-    curl -u user_one:password_one -X POST http://localhost:8080/auth/password
-   -H "Content-Type: application/json"
-   -d '{"oldPassword": "password_three", "newPassword": "newSecret"}'
-
-    curl -u user_one:password_one -X POST http://localhost:8080/auth/change-password -H "Content-Type:
-    application/json" -d '{"oldPassword": "password_three", "newPassword": "newSecret"}'
-
-     */
     @PostMapping("change-password" )
-    public ResponseEntity<Boolean> changePassword(Authentication authentication,@RequestBody Password password) {
+    public ResponseEntity<Boolean> changePassword(Authentication authentication, @RequestBody Password password) {
 
         log.info("Changing password for user: {} with: {}", authentication.getName(), password);
         boolean result = userPasswordService.changeUserPassword(authentication.getName(), password.getOldPassword().trim(),
@@ -54,6 +44,6 @@ public class AuthTestController {
 
     @GetMapping("logout")
     public void logout(Authentication authentication) {
-            userPasswordService.logOut(authentication.getName());
+        userPasswordService.logOut(authentication.getName());
     }
 }

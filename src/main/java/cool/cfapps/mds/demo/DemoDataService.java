@@ -1,27 +1,12 @@
 package cool.cfapps.mds.demo;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Primary;
+
+import java.util.List;
 
 
-@Service
-@Slf4j
-@Transactional
-public class DemoDataService {
+public interface DemoDataService {
 
-    private final DemoDataRepository demoDataRepository;
-
-
-    public DemoDataService(DemoDataRepository demoDataRepository, ApplicationContext applicationContext) {
-        this.demoDataRepository = demoDataRepository;
-
-    }
-
-    public Iterable<DemoData> fetchDemoData() {
-        Iterable<DemoData> data = demoDataRepository.findAll();
-        log.info("Data fetched from schema - user: {}", demoDataRepository.getSchema());
-        return data;
-    }
+    List<DemoData> fetchDemoData();
+    String type();
 }
