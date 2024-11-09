@@ -63,32 +63,36 @@ mvn spring-boot:run -Dspring-boot.run.profiles=jpa
 Check which profile is used by:
 ```bash
 curl -u user_one:password_one http://localhost:8080
-# Hello user_one from authenticated user for JDBC! OR Hello user_one from authenticated user for JPA!
 ```
+Returns: Hello user_one from authenticated user for JDBC! OR Hello user_one from authenticated user for JPA!
+
 
 
 ### Get Data
 ```bash
 curl -u user_one:password_one http://localhost:8080/demo
-# returns: [{"id":1,"field1":"jdbc","field2":"data one"}]
 ```
+returns: [{"id":1,"field1":"jdbc","field2":"data one"}]
+
 ```bash
 curl -u user_two:password_two http://localhost:8080/demo
-# returns: [{"id":1,"field1":"jdbc","field2":"data two"}]
 ```
+returns: [{"id":1,"field1":"jdbc","field2":"data two"}]
+
 ```bash
 curl -u user_three:password_three http://localhost:8080/demo
-# returns: [{"id":1,"field1":"jdbc","field2":"data three"}]
 ```
+returns: [{"id":1,"field1":"jdbc","field2":"data three"}]
+
 
 ### Change Password
 ```bash
 curl -u user_three:password_three -X POST http://localhost:8080/change-password \
 -H "Content-Type: application/json" \
 -d '{"oldPassword": "password_three", "newPassword": "newSecret"}'
-
-# returns: true if it changed, else false
 ```
+returns: true if it changed, else false
+
 
 ### Logout and Remove DataSource and close connections to DB
 After some seconds the DataSource (HikariDataSource) will remove all it's connection from the Hikari Pool and close 
