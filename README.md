@@ -61,7 +61,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=jpa
 ## Testing
 
 Check which profile is used by:
-``bash
+```bash
 curl -u user_one:password_one http://localhost:8080
 # Hello user_one from authenticated user for JDBC! OR Hello user_one from authenticated user for JPA!
 ```
