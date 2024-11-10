@@ -141,7 +141,7 @@ Uses the basic authentication credentials to create a DataSource using this cred
 If a "SELECT 1" is possible the DataSource is stored in the AbstractRoutingDataSource, so the SecurityContext will 
 determine the corresponding DataSource for this user.
 
-### Class "TenantRoutingDataSource"
+### Class "RoutingDataSource"
 This Class is marked as ```@Primary``` so the Router will determine the right DataSource for the given 
 SecurityContext and user, and it is marked as the Primary DataSource Bean.
 
