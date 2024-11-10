@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 import org.springframework.jdbc.datasource.lookup.DataSourceLookup;
 import org.springframework.jdbc.datasource.lookup.DataSourceLookupFailureException;
+import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -81,7 +82,6 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
     }
 
 
-
     public static DataSource getDataSourceByKey(String key) {
         return dataSources.get(key);
     }
@@ -113,7 +113,7 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
     private static class LookUp implements DataSourceLookup {
         @Override
-        public DataSource getDataSource(String dataSourceName) throws DataSourceLookupFailureException {
+        public DataSource getDataSource(@NonNull String dataSourceName) throws DataSourceLookupFailureException {
             log.info("Looking up DataSource: {}", dataSourceName);
             return dataSources.get(dataSourceName);
         }
