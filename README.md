@@ -14,6 +14,7 @@ All relevant data and configs from PostgreSQL and PGAdmin are exposed to the loc
 - Spring Boot Starter JDBC
 - Spring Boot Starter JPA
 - Spring Boot Starter Security
+- Spring Boot Starter Actuators
 - PostgreSQL
 - Lombok
 - Spring Boot Starter Web
