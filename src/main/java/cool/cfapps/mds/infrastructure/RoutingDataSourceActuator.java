@@ -11,7 +11,6 @@ import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -19,10 +18,10 @@ import java.util.List;
 @Component
 @Slf4j
 @Endpoint(id = "routing-data-sources")
-public class RoutingDataSourcesActuator {
+public class RoutingDataSourceActuator {
     private final RoutingDataSource routingDataSource;
 
-    public RoutingDataSourcesActuator(RoutingDataSource routingDataSource) {
+    public RoutingDataSourceActuator(RoutingDataSource routingDataSource) {
         this.routingDataSource = routingDataSource;
     }
 
