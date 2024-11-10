@@ -84,6 +84,38 @@ curl -u user_three:password_three http://localhost:8080/demo
 ```
 returns: [{"id":1,"field1":"jdbc","field2":"data three"}]
 
+### Statistics using actuators
+This demo exposes some statistics about each DataSource [key,lastAccess,accessCount,secondsIdle]
+
+The security configurations allows access to all actuator endpoints. To access the routing data sources endpoint use:
+```http request
+http://localhost:8080/actuator/routing-data-sources
+```
+Example Result:
+```json
+{
+  "statistics": [
+    {
+      "key": "user_one",
+      "accessCount": 4,
+      "lastAccess": "2024-11-10 09:18:31",
+      "secondsIdle": 59
+    },
+    {
+      "key": "user_three",
+      "accessCount": 1,
+      "lastAccess": "2024-11-10 09:19:29",
+      "secondsIdle": 1
+    },
+    {
+      "key": "user_two",
+      "accessCount": 4,
+      "lastAccess": "2024-11-10 09:19:21",
+      "secondsIdle": 9
+    }
+  ]
+}
+```
 
 ### Change Password
 ```bash

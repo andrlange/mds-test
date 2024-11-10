@@ -17,26 +17,31 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @Primary
 @Slf4j
-public class TenantRoutingDataSource extends AbstractRoutingDataSource {
+public class RoutingDataSource extends AbstractRoutingDataSource {
 
     private final HikariDataSource defaultDataSource;
 
     private static final Map<String, DataSource> dataSources = new ConcurrentHashMap<>();
     private static final Map<String, DataSource> removedDataSources = new ConcurrentHashMap<>();
     private static final Map<Object, Object> lookup = new ConcurrentHashMap<>();
+    private static final Map<String, Date> lastAccess = new ConcurrentHashMap<>();
+    private static final Map<String, Long> countAccess = new ConcurrentHashMap<>();
 
-    TenantRoutingDataSource(@Value("${spring.datasource.driver-class-name}") String driver,
-                            @Value("${spring.datasource.url}") String url,
-                            @Value("${spring.datasource.username}") String username,
-                            @Value("${spring.datasource.password}") String password,
-                            @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
-                            @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize) {
+    RoutingDataSource(@Value("${spring.datasource.driver-class-name}") String driver,
+                      @Value("${spring.datasource.url}") String url,
+                      @Value("${spring.datasource.username}") String username,
+                      @Value("${spring.datasource.password}") String password,
+                      @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
+                      @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize) {
 
 
         defaultDataSource = DataSourceBuilder.create()
@@ -99,9 +104,9 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null) {
             if (getResolvedDataSources().size() != dataSources.size()) afterPropertiesSet();
-
             log.info("resolvedDataSources:{}", getResolvedDataSources().size());
             String key = authentication.getName();
+            updateStats(key);
             boolean r = lookup.get(key) != null;
             log.info("determineCurrentLookupKey: {} for 1 DataSource of {}: {}", key, lookup.size(), r);
             log.info("DataSources available: {}", lookup);
@@ -124,18 +129,20 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
         log.info("Destroying dataSources");
         dataSources.forEach((k, v) -> {
             try {
-                shutdownGracefully((HikariDataSource) v);
+                shutdownGracefully((HikariDataSource) v, k);
             } catch (Exception e) {
                 log.error("Error closing DataSource: {}", k, e);
             } finally {
                 dataSources.clear();
                 lookup.clear();
+                lastAccess.clear();
+                countAccess.clear();
                 log.info("DataSources destroyed");
             }
         });
     }
 
-    private static void shutdownGracefully(HikariDataSource hikariDataSource) {
+    private static void shutdownGracefully(HikariDataSource hikariDataSource, String key) {
         try {
             log.info("Starting graceful shutdown of HikariCP pool...");
 
@@ -155,6 +162,8 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
         } catch (Exception e) {
             log.error("Error during HikariCP shutdown", e);
             throw new RuntimeException("Failed to shutdown HikariCP properly", e);
+        } finally {
+            removedDataSources.remove(key);
         }
     }
 
@@ -164,13 +173,27 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
             log.info("Checking removed DataSource: {}", entry.getKey());
             DataSource old = entry.getValue();
             try {
-                shutdownGracefully((HikariDataSource) old);
+                shutdownGracefully((HikariDataSource) old, entry.getKey());
                 return true;
             } catch (Exception e) {
                 log.error("Error closing removed DataSource: {}", entry.getKey(), e);
                 return false;
             }
         });
+    }
+
+    private void updateStats(String key) {
+        lastAccess.put(key, new Date());
+        countAccess.put(key, countAccess.getOrDefault(key, 0L) + 1);
+        log.info("Stats: {} last access: {}, count access: {}", key, lastAccess.get(key), countAccess.get(key));
+    }
+
+    public Map<String, Date> getLastAccess() {
+        return Collections.unmodifiableMap(lastAccess);
+    }
+
+    public Map<String, Long> getCountAccess() {
+        return Collections.unmodifiableMap(countAccess);
     }
 }
 

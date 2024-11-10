@@ -35,7 +35,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
     private final int minPoolSize;
     private final int maxPoolSize;
 
-    private final TenantRoutingDataSource tenantRoutingDataSource;
+    private final RoutingDataSource routingDataSource;
 
 
     public DbUserDetailsService(
@@ -43,12 +43,12 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             @Value("${spring.datasource.url}") String url,
             @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
             @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize,
-            TenantRoutingDataSource tenantRoutingDataSource) {
+            RoutingDataSource routingDataSource) {
         this.driver = driver;
         this.url = url;
         this.minPoolSize = minPoolSize;
         this.maxPoolSize = maxPoolSize;
-        this.tenantRoutingDataSource = tenantRoutingDataSource;
+        this.routingDataSource = routingDataSource;
     }
 
     @Bean
@@ -127,7 +127,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             log.info("Schema for this user: {} is {}", un, dataSource.getConnection().getSchema());
 
             if (result.get() == 1) {
-                tenantRoutingDataSource.addDataSource(un, dataSource);
+                routingDataSource.addDataSource(un, dataSource);
             }
         } catch (Exception e) {
             log.info("Failed to capture connection: {}", e.getMessage());
@@ -164,12 +164,12 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             return false;
         }
 
-        JdbcTemplate jdbc = new JdbcTemplate(TenantRoutingDataSource.getDataSourceByKey(username));
+        JdbcTemplate jdbc = new JdbcTemplate(RoutingDataSource.getDataSourceByKey(username));
         String sql = "ALTER ROLE " + username + " WITH PASSWORD '" + newPassword + "'; ";
 
         log.info("Updating user password for user in database: {}", username);
         jdbc.execute(sql);
-        tenantRoutingDataSource.replaceDataSource(username, createDataSource(username, newPassword));
+        routingDataSource.replaceDataSource(username, createDataSource(username, newPassword));
 
         log.info("Updating user password for user in UserDetailsService: {}", username);
         updateUser(createUserDetails(username, newPassword));
@@ -205,7 +205,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
             log.info("LogOff user: {}", username);
         }
 
-        tenantRoutingDataSource.removeDataSource(username);
+        routingDataSource.removeDataSource(username);
         deleteUser(username);
         log.info("Removed user from UserDetailsService and DataSource: {}", username);
     }
