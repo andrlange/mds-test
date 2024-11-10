@@ -17,7 +17,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
