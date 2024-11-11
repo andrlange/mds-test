@@ -137,13 +137,28 @@ curl -u user_three:password_three http://localhost:8080/logout
 ## Explanation:
 
 ### Class "DbUserDetailsService"
-Uses the basic authentication credentials to create a DataSource using this credentials.
+Uses the basic authentication credentials to create a DataSource using these credentials.
 If a "SELECT 1" is possible the DataSource is stored in the AbstractRoutingDataSource, so the SecurityContext will 
-determine the corresponding DataSource for this user.
+determine the corresponding DataSource for this user and stores the credentials inside an InMemoryUserDetails 
+Manager encrypted via. bcrypt to keep the Authentication as long a session exists and the user is not logged out.
 
 ### Class "RoutingDataSource"
 This Class is marked as ```@Primary``` so the Router will determine the right DataSource for the given 
-SecurityContext and user, and it is marked as the Primary DataSource Bean.
+SecurityContext and user, and it is marked as the Primary DataSource Bean. It implements ```determineCurrentLookupKey
+()``` to get the right DataSource for the right key.
+Keys could be anything like username, tenant, session_keys or others based on your requirements. For this we can 
+implement a Mapping between any external key and the finding key for the DataSource.
+
+You can implement your own DataSourceLookup, so you can map the right DataSource to any key or Object.
+```java  
+private static class LookUp implements DataSourceLookup {
+    @Override
+    public DataSource getDataSource(@NonNull String dataSourceName) throws DataSourceLookupFailureException {
+        log.info("Looking up DataSource: {}", dataSourceName);
+        return dataSources.get(dataSourceName);
+    }
+}
+```
 
 
 ## Consideration
