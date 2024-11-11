@@ -1,5 +1,7 @@
 # Multi Data Source Demo using JDBC or JPA (Profiles)
 
+( the more complex demo using vaadin: https://github.com/andrlange/mds-vaadin )
+
 This Demo shows how we can use Spring Security with Database Users only and Multi-Schema in a DB for authentication and 
 routing all 
 DB Queries (CrudRepository or JPARepository + Service) using the right DB user context and the Option of JDBC only 
