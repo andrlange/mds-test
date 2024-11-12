@@ -90,6 +90,10 @@ public class RoutingDataSource extends AbstractRoutingDataSource {
         return dataSources.get(key);
     }
 
+    public boolean hasDataSource(String key) {
+        return dataSources.containsKey(key);
+    }
+
 
     public void addDataSource(String un, DataSource ds) {
         lookup.computeIfAbsent(un, k -> un);

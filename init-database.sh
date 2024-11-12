@@ -111,21 +111,26 @@ ALTER ROLE user_three SET search_path = schema_user_three;
 -- Step 6: Create a table for storing user credentials in the public schema, restricted to the postgres user
 CREATE TABLE IF NOT EXISTS public.users (
 username VARCHAR(50) PRIMARY KEY,
-password VARCHAR(50) -- In production, store a hashed password instead of plain text
+role VARCHAR(50),
+schema VARCHAR(50)
 );
 
 -- Insert credentials into the users table, if they do not already exist
-INSERT INTO public.users (username, password)
-SELECT 'user_one', 'password_one'
+INSERT INTO public.users (username, role, schema)
+SELECT 'user_one', 'USER', 'schema_user_one'
 WHERE NOT EXISTS (SELECT 1 FROM public.users WHERE username = 'user_one');
 
-INSERT INTO public.users (username, password)
-SELECT 'user_two', 'password_two'
+INSERT INTO public.users (username, role, schema)
+SELECT 'user_two', 'USER', 'schema_user_two'
 WHERE NOT EXISTS (SELECT 1 FROM public.users WHERE username = 'user_two');
 
-INSERT INTO public.users (username, password)
-SELECT 'user_three', 'password_three'
+INSERT INTO public.users (username, role, schema)
+SELECT 'user_three', 'USER', 'schema_user_three'
 WHERE NOT EXISTS (SELECT 1 FROM public.users WHERE username = 'user_three');
+
+INSERT INTO public.users (username, role, schema)
+SELECT 'postgres', 'ADMIN', 'public'
+WHERE NOT EXISTS (SELECT 1 FROM public.users WHERE username = 'postgres');
 
 -- Restrict access to the users table so only the postgres superuser can read it
 REVOKE ALL ON TABLE public.users FROM PUBLIC;
@@ -135,4 +140,16 @@ INSERT INTO schema_user_one.demo_data (field1,field2) values('demo','data one');
 INSERT INTO schema_user_two.demo_data (field1,field2) values('demo','data two');
 INSERT INTO schema_user_three.demo_data (field1,field2) values('demo','data three');
 
+CREATE VIEW public.demo_data AS
+SELECT 1 as id,field1,field2  FROM schema_user_one.demo_data
+UNION select 2 as id,field1,field2  FROM schema_user_two.demo_data
+UNION select 3 as id,field1,field2  FROM schema_user_three.demo_data;
+
+CREATE VIEW schema_user_one.schema_users AS SELECT username, role FROM public.users WHERE schema LIKE 'schema_user_one';
+CREATE VIEW schema_user_two.schema_users AS SELECT username, role FROM public.users WHERE schema LIKE 'schema_user_two';
+CREATE VIEW schema_user_three.schema_users AS SELECT username, role FROM public.users WHERE schema LIKE 'schema_user_three';
+CREATE VIEW public.schema_users as SELECT username, role FROM public.users WHERE schema LIKE 'public';
+GRANT SELECT ON schema_user_one.schema_users TO user_one;
+GRANT SELECT ON schema_user_two.schema_users TO user_two;
+GRANT SELECT ON schema_user_three.schema_users TO user_three;
 EOSQL

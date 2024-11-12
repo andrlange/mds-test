@@ -87,6 +87,25 @@ curl -u user_three:password_three http://localhost:8080/demo
 ```
 returns: [{"id":1,"field1":"jdbc","field2":"data three"}]
 
+### User Roles
+This demo keeps roles USER for user_one, user_two and user_three and ADMIN for postgres.
+
+To configure roles user relation this demo provides coonfiguration parameters for this:
+```properties
+# Application specific configuration
+
+# specifies if main db user can log in
+mds.security.database.allow-default-login=true
+# default role if nothing is set
+mds.security.roles.default-role=NONE
+# table or view to read the own users role
+mds.security.roles.role-table=schema_users
+# column which returns the role
+mds.security.roles.role-column=role
+# column which filters the role for a particular user
+mds.security.roles.user-column=username
+```
+
 ### Statistics using actuators
 This demo exposes some statistics about each DataSource [key,lastAccess,accessCount,secondsIdle]
 

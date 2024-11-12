@@ -36,19 +36,37 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
     private final int maxPoolSize;
 
     private final RoutingDataSource routingDataSource;
+    private final String defaultUserName;
+
+    @Value("${mds.security.database.allow-default-login:false}")
+    private boolean allowDefaultLogin;
+    @Value("${mds.security.roles.default-role:}")
+    private String defaultRole;
+    @Value("${mds.security.roles.role-table:}")
+    private String roleTable;
+    @Value("${mds.security.roles.role-column:}")
+    private String roleColumn;
+    @Value("${mds.security.roles.user-column:}")
+    private String userColumn;
 
 
     public DbUserDetailsService(
             @Value("${spring.datasource.driver-class-name}") String driver,
             @Value("${spring.datasource.url}") String url,
-            @Value("${spring.datasource.hikari.minimum-idle}") int minPoolSize,
-            @Value("${spring.datasource.hikari.maximum-pool-size}") int maxPoolSize,
+            @Value("${spring.datasource.username}") String defaultUserName,
+            @Value("${spring.datasource.hikari.minimum-idle:1}") int minPoolSize,
+            @Value("${spring.datasource.hikari.maximum-pool-size:2}") int maxPoolSize,
             RoutingDataSource routingDataSource) {
         this.driver = driver;
         this.url = url;
         this.minPoolSize = minPoolSize;
         this.maxPoolSize = maxPoolSize;
         this.routingDataSource = routingDataSource;
+        this.defaultUserName = defaultUserName;
+        this.defaultRole = defaultRole != null ? defaultRole : "NA";
+        this.roleTable = roleTable != null ? roleTable : "";
+        this.roleColumn = roleColumn != null ? roleColumn : "";
+        this.userColumn = userColumn != null ? userColumn : "";
     }
 
     @Bean
@@ -71,6 +89,11 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
         }
 
         log.info("try to get user: {} : {}", username, password);
+
+        if (!allowDefaultLogin && defaultUserName.equals(username)) {
+            log.info("Default user login is not allowed");
+            return null;
+        }
 
         try {
             UserDetails checkUser = super.loadUserByUsername(username);
@@ -95,21 +118,51 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
     private UserDetails createUserDetails(String username, String password) {
 
+        String role = defaultRole;
+        // Check user role from db
+        if (!roleTable.isEmpty() && !roleColumn.isEmpty()) {
+            String sql = "SELECT " + roleColumn + "," + userColumn +
+                         " FROM " + roleTable +
+                         " WHERE " + userColumn + " = '" + username + "'";
 
-        UserDetails ud = User.builder()
+            try {
+                JdbcTemplate jdbc = new JdbcTemplate(RoutingDataSource.getDataSourceByKey(username));
+                String result = jdbc.query(sql,
+                        (rs, col) -> {
+                            return rs.getString(1);
+                        }).getFirst();
+                if (result != null) {
+                    role = result;
+                }
+                log.info("User role for this user: {}", role);
+
+            } catch (Exception e) {
+                log.info("Failed to gather role: {}", e.getMessage());
+            }
+
+        }
+
+        log.info("Creating userDetails: {} - {}", username, role);
+
+        return User.builder()
                 .username(username)
                 .password(passwordEncoder().encode(password))
-                .roles("USER")
+                .roles(role.split(","))
                 .build();
 
-        log.info("Created userDetails: {}", ud);
-        return ud;
     }
 
     private boolean checkUserAgainstDb(String un, String pw) {
 
+        boolean existingDataSource = false;
+        DataSource dataSource;
+        if (routingDataSource.hasDataSource(un)) {
+            existingDataSource = true;
+            dataSource = RoutingDataSource.getDataSourceByKey(un);
+        } else {
+            dataSource = createDataSource(un, pw);
+        }
 
-        DataSource dataSource = createDataSource(un, pw);
 
         log.info("Checking user against database: {}:{} - {} - {}", un, pw, url, driver);
 
@@ -126,7 +179,7 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
 
             log.info("Schema for this user: {} is {}", un, dataSource.getConnection().getSchema());
 
-            if (result.get() == 1) {
+            if (!existingDataSource && result.get() == 1) {
                 routingDataSource.addDataSource(un, dataSource);
             }
         } catch (Exception e) {
@@ -209,8 +262,6 @@ public class DbUserDetailsService extends InMemoryUserDetailsManager {
         deleteUser(username);
         log.info("Removed user from UserDetailsService and DataSource: {}", username);
     }
-
-
 
 
 }
