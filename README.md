@@ -90,7 +90,7 @@ returns: [{"id":1,"field1":"jdbc","field2":"data three"}]
 ### User Roles
 This demo keeps roles USER for user_one, user_two and user_three and ADMIN for postgres.
 
-To configure roles user relation this demo provides coonfiguration parameters for this:
+To configure roles user relation this demo provides configuration parameters for this:
 ```properties
 # Application specific configuration
 
